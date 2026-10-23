@@ -1,203 +1,229 @@
-# zDesk 0.1.0
+# zDesk
 
-zDesk is a lightweight desktop widget for Ubuntu GNOME Wayland through XWayland. One Rust process creates two transparent ARGB windows on each active monitor: a clock, weekday, and greeting above, with CPU, temperature, and RAM rings below. The windows use the *desktop* type and pass clicks through. The widget process uses no GTK, Pango, Lua, or shell commands. It draws in strips no taller than 32 pixels to avoid keeping a large framebuffer in memory.
+**Lightweight desktop widgets for Ubuntu GNOME, written in Rust.**
 
-The clock and weekday update when the minute changes. Sensors are read directly from `/proc` and `/sys` at the configured interval, and one reading is shared across monitors. Monitor geometry comes from RandR, so the windows follow layout changes. On GNOME Wayland, Mutter ultimately decides where XWayland windows appear; check placement visually. If Mutter destroys a live zDesk window unexpectedly, zDesk exits instead of automatically recreating the window in a loop. Measure RSS and CPU in the same desktop session after each change.
+zDesk is a Conky-inspired desktop widget application that displays a digital clock, weekday indicator, personalized greeting, and circular CPU, temperature, and RAM indicators. The widget runs as a small native Rust process using X11/XWayland. A separate GTK4/libadwaita application provides graphical settings.
 
-This release begins the zDesk version series at **v0.1.0**. It is a rebrand
-and version reset of the existing implementation, not a return to the older
-clock-only feature set. Prior development notes are preserved in
-[`docs/LEGACY-CHANGELOG.md`](docs/LEGACY-CHANGELOG.md). Existing installations
-under the previous binary/service name are **not** removed automatically.
-Check the old user services before enabling the new startup timer so both
-widgets do not run simultaneously.
+**Current version:** `v0.1.0`  
+**Author:** Azis Lamayuda  
+**License:** [MIT](LICENSE)
 
-## Project layout
+> **Compatibility:** Developed and tested on Ubuntu GNOME with a Wayland session and XWayland. Other desktop environments and compositors have not been verified. zDesk requires a compatible 32-bit ARGB X11 visual and related X11 extensions.
 
-```text
-zDesk/
-├── Cargo.toml                     # desktop widget
-├── settings/                      # separate settings application
-│   ├── Cargo.toml
-│   └── src/{main,store,changelog}.rs
-├── config/{default,v0.1}.toml
-├── CHANGELOG.md
-├── src/{main,config,clock,lite_font,metrics,monitor,shapes,startup_guard,widgets,x11}.rs
-├── systemd/{zdesk.service,zdesk.timer}
-└── scripts/{install,install-settings,benchmark,login-guard}.sh
-```
+## Features
 
-`config/default.toml` defines the text, fonts, colors, sizes, positions, ring geometry, sensor interval, and temperature source. Its initial layout follows the user's Conky setup. Only glyphs that appear on screen are processed, keeping memory use low. Config changes take effect after the service restarts; live reload is not available. The separate settings application uses GTK4/libadwaita only while its window is open. The desktop widget does not load that toolkit.
+- Digital clock with customizable font, size, color, and position.
+- Weekday labels with an active-day indicator.
+- Time-dependent greetings with customizable text and name.
+- Circular CPU usage, CPU temperature, and RAM usage widgets.
+- Transparent, click-through desktop windows.
+- Support for multiple monitors via XRandR, using one widget process.
+- Lightweight drawing without loading GTK into the widget process.
+- Separate **zDesk Settings** GUI built with GTK4 and libadwaita.
+- TOML configuration with validation and **Save & Apply**.
+- Optional delayed autostart using a systemd user timer and startup guard.
 
-## Build and install
+## Requirements
 
-Install Rust and Cargo on Ubuntu if needed:
+- Linux desktop running **Ubuntu GNOME** with **XWayland** available.
+- Rust and Cargo to build the project.
+- For the Settings GUI: `pkg-config`, GTK4 development files, and **libadwaita 1.9 or newer** development files.
+- TTF/OTF fonts referenced by the configuration file.
+
+On a compatible Ubuntu version, install the system build dependencies with:
 
 ```bash
 sudo apt update
-sudo apt install rustc cargo
+sudo apt install build-essential pkg-config libgtk-4-dev libadwaita-1-dev
 ```
 
-From the `zDesk` directory, which contains `scripts`, run:
+Install or update Rust/Cargo separately if they are not already available. Verify the installed development libraries with:
 
 ```bash
+rustc --version
+cargo --version
+pkg-config --modversion gtk4
+pkg-config --modversion libadwaita-1
+```
+
+**Fonts are not bundled.** The example configuration references Monoton, Bebas Neue, Roboto, and DejaVu Sans Mono font files. Install the necessary fonts or edit their paths in `config/default.toml` / `~/.config/zdesk/config.toml` before starting zDesk. The example greeting name should also be personalized.
+
+## Installation
+
+From the root of the cloned `zDesk` repository:
+
+```bash
+# Build and install the widget, configuration and systemd user units
 bash scripts/install.sh
-```
 
-If the terminal is already in `zDesk/scripts`, run:
-
-```bash
-bash install.sh
-```
-
-The script builds a release binary and installs it at `~/.local/bin/zdesk`. It preserves the user's edited config; a complete example is available at `~/.config/zdesk/example.toml`. The installer disables zDesk autostart, backs up a differing service unit as `zdesk.service.pre-safe-start.bak`, and installs the safe service and timer. On existing installations, it stops active zDesk units and disables any enabled zDesk service/timer before replacing them. It does not enable the timer automatically or modify Conky's configuration.
-
-To apply a config change after zDesk starts:
-
-```bash
-systemctl --user restart zdesk.service
-```
-
-To build the widget without installing a service:
-
-```bash
-cargo build --release
-```
-
-Make sure the configured TTF/OTF font files exist, or change their paths. `--check-config` does not need an XWayland connection.
-
-To test the widget manually without installing systemd units, ensure
-`~/.config/zdesk/config.toml` exists (copy it from `config/default.toml` if needed),
-then run `./target/release/zdesk` from the repository. The widget takes no
-positional config path; `--check-config /path/to/file.toml` only validates that
-file and does not start the widget.
-
-## Settings window in v0.1.0
-
-To add the settings application to an existing safe installation, run this from `zDesk`:
-
-```bash
+# Build and install the separate Settings application and GNOME launcher
 bash scripts/install-settings.sh
 ```
 
-This builds and installs both binaries and adds `~/.local/share/applications/id.lamayuda.zDesk.Settings.desktop`. Open **zDesk Settings** from the GNOME application menu, or run `~/.local/bin/zdesk-settings`. The launcher opens the editor; the desktop widget does not autostart unless you have separately enabled its timer after testing. Building the editor requires `pkg-config`, `libgtk-4-dev`, and `libadwaita-1-dev`:
+**Do not use `sudo` with these installer scripts.** They install into the current user's home directory:
+
+| Installed component | Location |
+| --- | --- |
+| Widget binary | `~/.local/bin/zdesk` |
+| Settings binary | `~/.local/bin/zdesk-settings` |
+| User configuration | `~/.config/zdesk/config.toml` |
+| Example configuration | `~/.config/zdesk/example.toml` |
+| Service | `~/.config/systemd/user/zdesk.service` |
+| Timer | `~/.config/systemd/user/zdesk.timer` |
+| Startup guard | `~/.local/lib/zdesk/login-guard.sh` |
+| GNOME Settings launcher | `~/.local/share/applications/id.lamayuda.zDesk.Settings.desktop` |
+
+The widget installer preserves an existing edited configuration and **disables zDesk autostart during installation**. It does not remove an older DeskLamayuda installation automatically. Check for older user services before enabling zDesk's timer so that two versions do not run simultaneously.
+
+### Verify the installation
 
 ```bash
-sudo apt install pkg-config libgtk-4-dev libadwaita-1-dev
+zdesk --version
+zdesk --check-config ~/.config/zdesk/config.toml
 ```
 
-The window controls font sizes, clock and greeting positions, ring positions, greeting name, colors, and the available sensor refresh interval. **Save & Apply** is at the bottom right. The top-right menu has **About zDesk**, showing creator **Azis Lamayuda** and the application version, followed by **Changelog**, which lists changes across all released versions.
+Expected version: `zDesk 0.1.0`. Configuration validation also checks referenced font files and does not open a desktop window.
 
-**Save & Apply** validates the edits, creates a backup, and saves the TOML file. If the widget service is active, the editor waits for its restart and confirms it stays active briefly before showing “Changes applied”. Click the button again to retry applying saved settings if needed, even when no fields have changed. If the service is inactive, the changes take effect the next time it starts. If it is still starting, wait until it becomes active and click the button again. Other TOML values and comments are preserved.
+## Running zDesk safely
 
-The settings installer leaves the running service and timer as they are. The settings window does not start automatically at login. To validate another TOML file without opening the widget:
-
-```bash
-~/.local/bin/zdesk --check-config /path/to/config.toml
-```
-
-The editor selects the Cairo renderer in this session to reduce memory while open. In one local measurement, it used about **125–128 MiB RSS / 43–46 MiB PSS**, while the running desktop widget used about **5 MiB RSS**. Closing the editor releases its memory. Those editor figures are separate from the widget's memory target.
-
-## Multiple monitors
-
-zDesk uses one process to show one clock and one set of rings on each monitor detected by XWayland. RandR supplies the geometry for each monitor; the config's `anchor`, `offset_x`, and `offset_y` apply relative to that monitor. Changing a font size does not move the window. When the monitor layout changes, the application updates its windows without a second instance.
-
-To inspect the layout and windows from a terminal in the desktop session:
-
-```bash
-xrandr --listmonitors
-xwininfo -root -tree | grep zDesk
-```
-
-With eDP-1 at `1920x1080+0+0` and HDMI-1 at `1920x1080+1920+0`, the user's config at the time of measurement placed clocks at `+650+215` and `+2570+215`, and rings at `+750+935` and `+2670+935`.
-
-## Safe startup after login (opt-in, not recommended during initial testing)
-
-On October 16, 2026, version 0.3 starting at the beginning of a GNOME session was associated with an XWayland crash followed by a GNOME Shell crash, returning the user to the login screen. The older unit also retried every three seconds. The optional timer waits 45 seconds after timer activation and does not retry on failure. This delay does not guarantee GNOME Shell or XWayland stability. Keep zDesk autostart disabled during first-time migration and testing. It records a startup marker that the widget clears after 60 seconds of stable runtime. A normal service stop also clears the current boot's marker, so shutting down shortly after Save & Apply does not block the next login. An unexpected failure keeps the marker; while it exists, later automatic starts are skipped, including across reboots.
-
-After the GNOME desktop is open and stable, test the service manually first:
+When first installing or migrating, keep automatic startup disabled and test the service **after the GNOME desktop is fully loaded**:
 
 ```bash
 systemctl --user start zdesk.service
-systemctl --user status zdesk.service
-xwininfo -root -tree | grep zDesk
+systemctl --user --no-pager status zdesk.service
 ```
 
-The `start` command returns when the process starts. Test multiple desktop sessions before considering automatic startup. The following command is **optional** and should **not** be used during initial migration:
+To stop the widget:
+
+```bash
+systemctl --user stop zdesk.service
+```
+
+To run a build directly without installing it, first ensure `~/.config/zdesk/config.toml` exists, then run:
+
+```bash
+cargo build --release --locked
+./target/release/zdesk
+```
+
+`zdesk` does **not** accept a positional configuration path. Use `--check-config /path/to/file.toml` to validate a particular file.
+
+## zDesk Settings
+
+Open **zDesk Settings** from the GNOME application menu, or run:
+
+```bash
+zdesk-settings
+```
+
+The editor provides settings for the clock, weekday labels, greeting, positions, ring layout, colors, and sensor refresh interval. Click **Save & Apply** to validate and save edits. If the widget service is active, Settings requests a service restart to apply the updated configuration. The settings file's unrelated values and comments are preserved, and a backup is created when saving changes.
+
+The Settings application runs only when opened; GTK4/libadwaita is not loaded by the widget itself. More advanced options can be changed directly in the TOML file.
+
+## Optional autostart and GNOME safety
+
+> **Important:** An earlier iteration of this project was associated with a GNOME/XWayland login-loop incident. Delayed startup and the guard reduce the risk of repeated automatic launches, but **cannot guarantee that the compositor will never fail**.
+
+The installed `zdesk.service` does not restart automatically (`Restart=no`). The optional `zdesk.timer` starts the service approximately 45 seconds after the timer activates. A startup marker is cleared after 60 seconds of stable runtime or a normal stop; if startup fails unexpectedly, the guard can prevent subsequent automatic attempts.
+
+Only after successful manual tests and a normal logout/login test, enable autostart:
 
 ```bash
 systemctl --user enable zdesk.timer
 ```
 
-Do not enable `zdesk.service` directly. To stop automatic starts:
+The timer will be activated by the graphical user session; it is **not necessary to enable `zdesk.service` directly**. To disable autostart and stop the widget:
 
 ```bash
 systemctl --user disable --now zdesk.timer
 systemctl --user stop zdesk.service
 ```
 
-If the failure marker is present and you want to retry after the desktop stabilizes:
+### Recovery if GNOME cannot open normally
+
+If a future login is affected, try `Ctrl + Alt + F3` to access a text console (TTY), sign in, then disable the user timer:
 
 ```bash
+systemctl --user disable --now zdesk.timer
+systemctl --user stop zdesk.service
+```
+
+If the user systemd manager is unavailable from TTY, remove the autostart symlink and try logging in again:
+
+```bash
+rm -f ~/.config/systemd/user/graphical-session.target.wants/zdesk.timer
+```
+
+These commands only target zDesk's autostart and do not modify GNOME Shell or GDM. A different GNOME failure may require separate diagnosis.
+
+If a guarded startup was skipped, inspect the logs and reset the marker **only after** the desktop is stable:
+
+```bash
+journalctl --user -u zdesk.service -n 50 --no-pager
 ~/.local/lib/zdesk/login-guard.sh reset
-systemctl --user start zdesk.service
 ```
 
-The historical logs did not identify exactly why the early XWayland connection crashed. A prior installation reportedly passed shutdown/restart testing with its timer; this is not a guarantee of compatibility for zDesk v0.1.0. Keep autostart off until manual runtime and reboot tests pass. The startup guard avoids leaving a marker after a normal shutdown during the first minute following Save & Apply.
-
-## Comparing with Conky (optional)
-
-Run the following **in a terminal in the user's GNOME session**, not a remote terminal without display access:
+## Building and testing
 
 ```bash
-systemctl --user status conky.service
-systemctl --user show-environment | grep -E '^(DISPLAY|XAUTHORITY)='
+# Desktop widget
+cargo fmt --all -- --check
+cargo test --locked
+cargo build --release --locked
+
+# Separate Settings app
+cargo fmt --manifest-path settings/Cargo.toml --all -- --check
+cargo test --manifest-path settings/Cargo.toml --locked
+cargo build --manifest-path settings/Cargo.toml --release --locked
 ```
 
-If the session's `DISPLAY` or `XAUTHORITY` is missing from the user systemd environment, import it from a GNOME terminal before starting zDesk:
-
-```bash
-systemctl --user import-environment DISPLAY XAUTHORITY
-systemctl --user start zdesk.service
-```
-
-When Conky runs for a comparison, its clock, greeting, and rings overlap zDesk because the positions are similar. For a visual check, temporarily change `window.offset_x` or `rings_window.offset_x` in the config, then restart only the zDesk service. If the widget does not appear or is on the wrong layer, inspect `journalctl --user -u zdesk.service -n 50 --no-pager`. Keep the Conky configuration intact.
-
-## Checking RSS and CPU
-
-After zDesk has been idle for a few minutes:
+For a one-minute resource measurement while the widget is running:
 
 ```bash
 bash scripts/benchmark.sh 60
 ```
 
-The script reads RSS, PSS, and CPU time differences from `/proc` for 60 seconds for zDesk and for Conky if it is running. CPU% treats one core as 100%; it is an average over the interval, not the process's lifetime. Summing the RSS of two Conky processes can count shared memory twice; PSS apportions it. Repeat the measurement under the same idle desktop conditions.
+The benchmark script reads CPU and memory statistics from `/proc`; it can also report Conky statistics when Conky is running. Results depend on the machine, monitor arrangement, and workload. One initial Ubuntu desktop test of zDesk v0.1.0 measured approximately **4.8 MiB RSS** and **0.1–0.2% CPU** in short samples; this is not a long-term performance guarantee.
 
-Historical 60-second measurement on one monitor, October 16, 2026, with the pre-rebrand widget (v0.2) and Conky running together:
+## Troubleshooting
 
-| Application | RSS | PSS | CPU, one core |
-| --- | ---: | ---: | ---: |
-| Pre-rebrand widget v0.2 | 5,036 KiB | 2,375 KiB | 0.200% |
-| Two Conky processes | 71,204 KiB | 17,147 KiB | 0.316% |
+| Symptom | What to check |
+| --- | --- |
+| Missing font / invalid config | Run `zdesk --check-config ~/.config/zdesk/config.toml` and correct the referenced font paths. |
+| Widget does not start through systemd | Check `systemctl --user status zdesk.service` and `journalctl --user -u zdesk.service -n 50 --no-pager`. |
+| XWayland environment unavailable | Compare `DISPLAY`, `WAYLAND_DISPLAY`, and `XAUTHORITY` with `systemctl --user show-environment`. |
+| Window placement differs | Inspect `xrandr --listmonitors`; GNOME/Mutter ultimately controls XWayland window placement. |
+| Settings changes are not visible | Check whether the service is active, then use **Save & Apply** or restart it manually. |
+| Startup guard skips launch | Review the journal; reset the guard only after GNOME is stable. |
 
-This is one historical sample, not a benchmark of the zDesk v0.1.0 release. The previous implementation met the original RSS target, while CPU was exactly 0.200%, rather than below the original `< 0.2%` target.
+## Repository layout
 
-The pre-rebrand v0.3 build measured over 60 seconds on two monitors, with Conky stopped: **5,300 KiB RSS**, **2,635 KiB PSS**, and **0.233% CPU** of one core. This does not compare Conky in the same session.
-
-## Current limits
-
-Version 0.1.0 shows the weekday, greeting, and three sensor rings on every active monitor. The editor covers commonly changed settings; advanced options can still be edited directly in TOML. Automatic config reload and other compositors are not supported. `anchor = "center"` is calculated for each monitor if XWayland provides RandR 1.5; otherwise the app uses one X11 root geometry. XWayland must provide an ARGB32 visual and the XRender/SHAPE extensions. If Mutter places desktop-type windows unexpectedly, GNOME-specific adjustments may be needed.
-
-## Version and name verification
-
-```bash
-cargo run -- --version
-# zDesk 0.1.0
-
-cargo test --locked
-cargo test --manifest-path settings/Cargo.toml --locked
+```text
+zDesk/
+├── Cargo.toml
+├── Cargo.lock
+├── README.md
+├── LICENSE
+├── CHANGELOG.md
+├── config/
+│   ├── default.toml
+│   └── v0.1.toml
+├── src/                 # Native Rust desktop widget
+├── settings/            # GTK4/libadwaita Settings app (separate Cargo package)
+├── scripts/             # Installers, login guard, benchmark
+├── systemd/             # User service and delayed timer
+└── docs/                # Historical development notes
 ```
 
-The widget binary and user service use the lowercase Linux identifiers
-`zdesk` and `zdesk.service`, while the visible application name is **zDesk**.
-The optional settings binary is `zdesk-settings`.
+## Limitations
+
+- Designed primarily for Ubuntu GNOME with XWayland; other environments are not verified.
+- Configuration changes require a service restart; there is no live config reload.
+- Advanced configuration options are edited directly in TOML.
+- GNOME/Mutter controls final placement of XWayland desktop-type windows.
+
+## License
+
+zDesk is released under the **MIT License**. See [LICENSE](LICENSE). Third-party Rust crates, GTK libraries, and font files remain subject to their respective licenses.
+
+Copyright © 2026 Azis Lamayuda.
