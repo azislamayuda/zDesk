@@ -1,0 +1,15 @@
+[Unit]
+Description=zDesk desktop widgets (XWayland)
+PartOf=graphical-session.target
+After=graphical-session.target
+CollectMode=inactive-or-failed
+
+[Service]
+Type=exec
+ExecCondition=%h/.local/lib/zdesk/login-guard.sh check
+ExecStartPre=%h/.local/lib/zdesk/login-guard.sh arm
+ExecStart=%h/.local/bin/zdesk
+ExecStopPost=%h/.local/lib/zdesk/login-guard.sh stopped
+Restart=no
+TimeoutStartSec=75s
+TimeoutStopSec=5s

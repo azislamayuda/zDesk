@@ -1,0 +1,95 @@
+# zDesk 0.1.0: the same visual layout appears on each active monitor.
+# The original 0.1 config remains valid and keeps its clock-only display.
+
+[window]
+width = 620
+height = 650
+anchor = "center"
+offset_x = 0
+offset_y = 0
+
+[clock]
+font_path = "~/.local/share/fonts/Monoton-Regular.ttf"
+font_size = 135.0
+color = "#FFF1E6"
+center_x = 310
+center_y = 270
+
+[weekday]
+labels = ["M", "T", "W", "T", "F", "S", "S"]
+center_x = [145, 200, 255, 310, 365, 420, 475]
+label_center_y = 40
+label_font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
+label_font_size = 10.0
+label_color = "#FFF1E6"
+dot_center_y = 78
+dot_radius = 5.0
+dot_stroke_width = 1.0
+inactive_color = "#665A61"
+active_color_mon_wed = "#FF6464"
+active_color_thu_sat = "#FF8A5B"
+active_color_sun = "#FF6464"
+
+[greeting]
+font_path = "~/.local/share/fonts/BebasNeue-Regular.ttf"
+font_size = 15.0
+center_x = 310
+center_y = 355
+morning_start = 5
+afternoon_start = 12
+evening_start = 17
+night_start = 21
+morning_text = "GOOD MORNING "
+afternoon_text = "GOOD AFTERNOON "
+evening_text = "GOOD EVENING "
+night_text = "GOOD NIGHT "
+name = "AZIS LAMAYUDA"
+suffix = ", HOPE YOU HAVE A NICE DAY!"
+color = "#FFF1E6"
+name_color = "#FF6464"
+
+[rings_window]
+width = 420
+height = 115
+anchor = "bottom_center"
+offset_x = 0
+offset_y = -30
+
+[rings]
+refresh_ms = 2000
+font_path = "~/.local/share/fonts/Roboto/static/Roboto-Regular.ttf"
+label_font_size = 11.0
+value_font_size = 15.0
+background_color = "#33292ED1"
+label_color = "#FFF2E6"
+value_color = "#FFF2E6"
+radius = 42.0
+thickness = 5.0
+start_angle_degrees = -90.0
+label_offset_y = -6
+value_offset_y = 18
+temperature_zone_types = ["TCPU", "x86_pkg_temp"]
+
+[rings.cpu]
+center_x = 100
+center_y = 55
+label = "CPU"
+unit = "%"
+max_value = 100.0
+foreground_color = "#FF6464"
+
+[rings.temperature]
+center_x = 210
+center_y = 55
+label = "TEMP"
+unit = "°C"
+max_value = 100.0
+foreground_color = "#FF8A5C"
+
+[rings.ram]
+center_x = 320
+center_y = 55
+label = "RAM"
+unit = "%"
+max_value = 100.0
+foreground_color = "#FFBF6E"

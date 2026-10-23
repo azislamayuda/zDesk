@@ -1,0 +1,16 @@
+[package]
+name = "zdesk-settings"
+version = "0.1.0"
+edition = "2021"
+description = "On-demand settings window for zDesk"
+license = "MIT"
+
+[dependencies]
+libadwaita = { version = "=0.9.2", features = ["v1_9"] }
+toml_edit = "=0.25.17"
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+panic = "abort"

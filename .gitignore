@@ -1,0 +1,50 @@
+# zDesk - files kept out of the GitHub source repository.
+# Cargo.lock (both root and settings/) IS intentionally committed.
+
+# Rust build artifacts
+/target/
+/settings/target/
+**/*.rs.bk
+
+# Local IDE state
+/.vscode/
+/.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Local environment and private configuration
+.env
+.env.*
+!.env.example
+/config/config.toml
+/config/local.toml
+
+# Generated logs and temporary files
+*.log
+*.log.*
+*.tmp
+/logs/
+/tmp/
+/temp/
+
+# Backups and patch rejects
+*.bak
+*.backup
+*.orig
+*.rej
+/backups/
+
+# Downloaded/generated archives and install packages
+# Use GitHub Releases for distribution files, not source commits.
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.deb
+*.rpm
+*.AppImage
+*.snap

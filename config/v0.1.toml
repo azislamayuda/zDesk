@@ -1,0 +1,17 @@
+# zDesk 0.1. All visual choices live here.
+# The window is deliberately shorter than the current 620x520 Conky window:
+# v0.1 draws only a clock and uses less framebuffer memory.
+
+[window]
+width = 620
+height = 240
+anchor = "center"
+offset_x = 0
+offset_y = 0
+
+[clock]
+font_path = "~/.local/share/fonts/Monoton-Regular.ttf"
+font_size = 135.0
+color = "#FFF1E6"
+center_x = 310
+center_y = 120

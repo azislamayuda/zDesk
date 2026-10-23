@@ -1,0 +1,14 @@
+[Unit]
+Description=Start zDesk after the GNOME desktop has settled
+PartOf=graphical-session.target
+After=graphical-session.target
+DefaultDependencies=no
+CollectMode=inactive-or-failed
+
+[Timer]
+OnActiveSec=45s
+AccuracySec=1s
+Unit=zdesk.service
+
+[Install]
+WantedBy=graphical-session.target
