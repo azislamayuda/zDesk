@@ -33,6 +33,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
 
 [[package]]
+name = "zdesk"
+version = "0.1.1"
+dependencies = [
+ "libc",
+ "serde",
+ "tiny-skia",
+ "toml",
+ "ttf-parser",
+ "x11rb",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -298,15 +310,3 @@ name = "x11rb-protocol"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acf4d1bc32aa46eec18caa634ec3cf4c05bfa151f12b93b510b15190f69a1ca8"
-
-[[package]]
-name = "zdesk"
-version = "0.1.0"
-dependencies = [
- "libc",
- "serde",
- "tiny-skia",
- "toml",
- "ttf-parser",
- "x11rb",
-]

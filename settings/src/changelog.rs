@@ -59,7 +59,8 @@ mod tests {
     fn history_includes_every_release() {
         let releases = releases();
         let versions: Vec<_> = releases.iter().map(|release| release.version).collect();
-        assert_eq!(versions, ["0.1.0"]);
+        assert_eq!(versions.first().copied(), Some(env!("CARGO_PKG_VERSION")));
+        assert!(versions.contains(&"0.1.0"));
         assert!(releases.iter().all(|release| !release.changes.is_empty()));
     }
 }

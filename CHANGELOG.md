@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.1
+
+- Reduce the optional GNOME autostart timer from 45 to 30 seconds; the existing crash-recovery guard and `Restart=no` behavior remain unchanged.
+- Let the widget event loop sleep until its next clock, sensor, or startup-guard deadline instead of waking every second unnecessarily.
+- Reuse the X11 upload buffer during RGBA-to-BGRA conversion to avoid incremental appends for each pixel.
+- Update version metadata for the widget and GTK4 Settings, with a version-aware changelog test.
+- Preserve visuals, configuration schema, multi-monitor behavior, Save & Apply, and the opt-in startup policy.
+
 ## 0.1.0
 
 - Rebranded the desktop widget and its settings application as zDesk.

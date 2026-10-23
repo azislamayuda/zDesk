@@ -6,7 +6,7 @@ DefaultDependencies=no
 CollectMode=inactive-or-failed
 
 [Timer]
-OnActiveSec=45s
+OnActiveSec=30s
 AccuracySec=1s
 Unit=zdesk.service
 

@@ -4,7 +4,7 @@
 
 zDesk is a Conky-inspired desktop widget application that displays a digital clock, weekday indicator, personalized greeting, and circular CPU, temperature, and RAM indicators. The widget runs as a small native Rust process using X11/XWayland. A separate GTK4/libadwaita application provides graphical settings.
 
-**Current version:** `v0.1.0`  
+**Current version:** `v0.1.1`  
 **Author:** Azis Lamayuda  
 **License:** [MIT](LICENSE)
 
@@ -82,7 +82,7 @@ zdesk --version
 zdesk --check-config ~/.config/zdesk/config.toml
 ```
 
-Expected version: `zDesk 0.1.0`. Configuration validation also checks referenced font files and does not open a desktop window.
+Expected version: `zDesk 0.1.1`. Configuration validation also checks referenced font files and does not open a desktop window.
 
 ## Running zDesk safely
 
@@ -124,7 +124,9 @@ The Settings application runs only when opened; GTK4/libadwaita is not loaded by
 
 > **Important:** An earlier iteration of this project was associated with a GNOME/XWayland login-loop incident. Delayed startup and the guard reduce the risk of repeated automatic launches, but **cannot guarantee that the compositor will never fail**.
 
-The installed `zdesk.service` does not restart automatically (`Restart=no`). The optional `zdesk.timer` starts the service approximately 45 seconds after the timer activates. A startup marker is cleared after 60 seconds of stable runtime or a normal stop; if startup fails unexpectedly, the guard can prevent subsequent automatic attempts.
+The installed `zdesk.service` does not restart automatically (`Restart=no`). The optional `zdesk.timer` starts the service approximately 30 seconds after the timer activates. A startup marker is cleared after 60 seconds of stable runtime or a normal stop; if startup fails unexpectedly, the guard can prevent subsequent automatic attempts.
+
+In v0.1.1 the default timer delay is shortened from 45 to **30 seconds**. It is measured from timer activation, not from entering the GNOME password. Shorter delays have not been validated on every GNOME/XWayland version; start with autostart disabled after upgrading and verify a full logout/login cycle. The installer deliberately disables an existing zDesk timer until you opt in again. To restore the previously tested 45-second delay, edit `~/.config/systemd/user/zdesk.timer` and set `OnActiveSec=45s`, then run `systemctl --user daemon-reload` before re-enabling the timer. Avoid an immediate 0-second start on systems with a history of login loops.
 
 Only after successful manual tests and a normal logout/login test, enable autostart:
 

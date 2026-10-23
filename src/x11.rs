@@ -496,10 +496,13 @@ pub fn run(
             }
         }
 
-        // Drain x11rb's internal event queue before polling the XWayland socket.
-        let mut timeout = clock::milliseconds_to_next_minute()?.min(1000);
-        if let Some(due) = next_ring_refresh {
-            let remaining = due.saturating_duration_since(Instant::now()).as_millis();
+        // Sleep until the next visible update or startup-guard check. X11
+        // events still wake poll immediately, including monitor hotplug.
+        let mut timeout = clock::milliseconds_to_next_minute()?;
+        for deadline in [next_ring_refresh, settle_at].into_iter().flatten() {
+            let remaining = deadline
+                .saturating_duration_since(Instant::now())
+                .as_millis();
             timeout = timeout.min(remaining.min(i32::MAX as u128) as i32);
         }
         let mut descriptor = libc::pollfd {
@@ -642,10 +645,14 @@ where
     while y < height {
         let rows = rows_per_request.min(height - y);
         paint(strip, y as u32);
-        wire.clear();
-        for pixel in strip.data()[..rows * stride].chunks_exact(4) {
+        // Reuse the wire allocation instead of extending it once per pixel.
+        wire.resize(rows * stride, 0);
+        for (rgba, bgra) in strip.data()[..rows * stride]
+            .chunks_exact(4)
+            .zip(wire.chunks_exact_mut(4))
+        {
             // tiny-skia stores premultiplied RGBA; little-endian ARGB32 is BGRA.
-            wire.extend_from_slice(&[pixel[2], pixel[1], pixel[0], pixel[3]]);
+            bgra.copy_from_slice(&[rgba[2], rgba[1], rgba[0], rgba[3]]);
         }
         conn.put_image(
             ImageFormat::Z_PIXMAP,
