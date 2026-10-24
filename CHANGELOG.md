@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2
+
+- Read only the aggregate CPU line from `/proc/stat` and reuse sensor reading buffers instead of allocating fresh file contents on every refresh.
+- Keep prepared ring labels and unchanged numeric glyph layouts across sensor updates; refresh the ring arcs every sample to preserve the existing display behavior.
+- Add focused unit tests for ring value formatting and fraction calculations.
+- Retain the existing XWayland rendering, GTK4 Settings, configuration format, 30-second opt-in startup timer, and login recovery guard.
+
 ## 0.1.1
 
 - Reduce the optional GNOME autostart timer from 45 to 30 seconds; the existing crash-recovery guard and `Restart=no` behavior remain unchanged.

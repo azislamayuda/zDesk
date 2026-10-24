@@ -143,6 +143,20 @@ impl Fonts {
         Ok(scene)
     }
 
+    /// Refresh numeric values while retaining the prepared labels and unchanged
+    /// display text. Arc fractions still update on every sensor sample.
+    pub fn update_rings(
+        &self,
+        settings: &Settings,
+        scene: &mut RingScene,
+        metrics: &Metrics,
+    ) -> AppResult<()> {
+        if let (Some(style), Some(font)) = (&settings.rings, &self.rings) {
+            scene.update(style, font, metrics)?;
+        }
+        Ok(())
+    }
+
     pub fn prepare_rings(
         &self,
         settings: &Settings,
@@ -207,18 +221,16 @@ struct RingVisual {
     foreground: [u8; 4],
     label: PreparedText,
     value: PreparedText,
+    display: String,
 }
 
 impl RingVisual {
     fn new(ring: &Ring, style: &Rings, font: &LiteFont, value: Option<f32>) -> AppResult<Self> {
-        let display = match value {
-            Some(value) => format!("{value:.0}{}", ring.unit),
-            None => format!("--{}", ring.unit),
-        };
+        let display = ring_display(value, &ring.unit);
         Ok(Self {
             x: ring.center_x as f32,
             y: ring.center_y as f32,
-            fraction: value.map_or(0.0, |value| (value / ring.max_value).clamp(0.0, 1.0)),
+            fraction: ring_fraction(value, ring.max_value),
             foreground: ring.foreground_rgba,
             label: font.prepare_text(
                 &ring.label,
@@ -234,8 +246,43 @@ impl RingVisual {
                 ring.center_y + style.value_offset_y,
                 style.value_rgba,
             )?,
+            display,
         })
     }
+
+    fn update(
+        &mut self,
+        ring: &Ring,
+        style: &Rings,
+        font: &LiteFont,
+        reading: Option<f32>,
+    ) -> AppResult<()> {
+        self.fraction = ring_fraction(reading, ring.max_value);
+        let display = ring_display(reading, &ring.unit);
+        if display != self.display {
+            let text = font.prepare_text(
+                &display,
+                style.value_font_size,
+                ring.center_x,
+                ring.center_y + style.value_offset_y,
+                style.value_rgba,
+            )?;
+            self.value = text;
+            self.display = display;
+        }
+        Ok(())
+    }
+}
+
+fn ring_display(value: Option<f32>, unit: &str) -> String {
+    match value {
+        Some(value) => format!("{value:.0}{unit}"),
+        None => format!("--{unit}"),
+    }
+}
+
+fn ring_fraction(value: Option<f32>, max_value: f32) -> f32 {
+    value.map_or(0.0, |value| (value / max_value).clamp(0.0, 1.0))
 }
 
 pub struct RingScene {
@@ -247,6 +294,17 @@ pub struct RingScene {
 }
 
 impl RingScene {
+    fn update(&mut self, style: &Rings, font: &LiteFont, metrics: &Metrics) -> AppResult<()> {
+        for (visual, (ring, reading)) in self.visuals.iter_mut().zip([
+            (&style.cpu, Some(metrics.cpu_percent)),
+            (&style.temperature, metrics.temp_celsius),
+            (&style.ram, Some(metrics.ram_percent)),
+        ]) {
+            visual.update(ring, style, font, reading)?;
+        }
+        Ok(())
+    }
+
     pub fn draw_strip(&self, strip: &mut Pixmap, strip_y: u32) {
         strip.fill(Color::TRANSPARENT);
         for ring in &self.visuals {
@@ -267,5 +325,26 @@ impl RingScene {
             ring.label.draw_strip(strip, strip_y);
             ring.value.draw_strip(strip, strip_y);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ring_display, ring_fraction};
+
+    #[test]
+    fn cached_ring_text_keeps_the_original_display_rounding() {
+        assert_eq!(ring_display(Some(49.2), "%"), "49%");
+        assert_eq!(ring_display(Some(49.4), "%"), "49%");
+        assert_eq!(ring_display(Some(50.6), "°C"), "51°C");
+        assert_eq!(ring_display(None, "°C"), "--°C");
+    }
+
+    #[test]
+    fn ring_arc_fraction_remains_independent_of_text_rounding() {
+        assert!((ring_fraction(Some(49.2), 100.0) - 0.492).abs() < 0.00001);
+        assert!((ring_fraction(Some(49.4), 100.0) - 0.494).abs() < 0.00001);
+        assert_eq!(ring_fraction(None, 100.0), 0.0);
+        assert_eq!(ring_fraction(Some(140.0), 100.0), 1.0);
     }
 }

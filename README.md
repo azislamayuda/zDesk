@@ -4,7 +4,7 @@
 
 zDesk is a Conky-inspired desktop widget application that displays a digital clock, weekday indicator, personalized greeting, and circular CPU, temperature, and RAM indicators. The widget runs as a small native Rust process using X11/XWayland. A separate GTK4/libadwaita application provides graphical settings.
 
-**Current version:** `v0.1.1`  
+**Current version:** `v0.1.2`  
 **Author:** Azis Lamayuda  
 **License:** [MIT](LICENSE)
 
@@ -82,7 +82,7 @@ zdesk --version
 zdesk --check-config ~/.config/zdesk/config.toml
 ```
 
-Expected version: `zDesk 0.1.1`. Configuration validation also checks referenced font files and does not open a desktop window.
+Expected version: `zDesk 0.1.2`. Configuration validation also checks referenced font files and does not open a desktop window.
 
 ## Running zDesk safely
 
@@ -184,6 +184,8 @@ For a one-minute resource measurement while the widget is running:
 ```bash
 bash scripts/benchmark.sh 60
 ```
+
+zDesk v0.1.2 reuses sensor text buffers and skips regenerating identical ring value text. Sensor arcs and readings still refresh according to `rings.refresh_ms`. These changes target allocation overhead; lower RSS or CPU usage is not guaranteed and should be measured on the same desktop before and after upgrading.
 
 The benchmark script reads CPU and memory statistics from `/proc`; it can also report Conky statistics when Conky is running. Results depend on the machine, monitor arrangement, and workload. One initial Ubuntu desktop test of zDesk v0.1.0 measured approximately **4.8 MiB RSS** and **0.1–0.2% CPU** in short samples; this is not a long-term performance guarantee.
 

@@ -450,7 +450,10 @@ pub fn run(
         if let (Some(due), Some(interval)) = (next_ring_refresh, ring_refresh) {
             if Instant::now() >= due {
                 if let Some(sampler) = sampler.as_mut() {
-                    ring_scene = widget_fonts.prepare_rings(settings, &sampler.sample()?)?;
+                    let readings = sampler.sample()?;
+                    if let Some(scene) = ring_scene.as_mut() {
+                        widget_fonts.update_rings(settings, scene, &readings)?;
+                    }
                     for pair in &mut windows {
                         if let Some(window) = pair.rings.as_mut() {
                             window.dirty = true;

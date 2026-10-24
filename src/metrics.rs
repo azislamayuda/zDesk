@@ -1,5 +1,6 @@
 use crate::AppResult;
-use std::fs;
+use std::fs::{self, File};
+use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 
 const PROC_STAT: &str = "/proc/stat";
@@ -22,21 +23,28 @@ pub struct Sampler {
     previous_cpu: CpuTicks,
     temp_path: Option<PathBuf>,
     preferred_types: Vec<String>,
+    cpu_line: String,
+    meminfo_text: String,
 }
 
 impl Sampler {
     pub fn new_with_preference(preferred: &[String]) -> AppResult<Self> {
-        let previous_cpu = parse_cpu_stat(&fs::read_to_string(PROC_STAT)?)?;
+        let mut cpu_line = String::with_capacity(192);
+        let previous_cpu = read_cpu_stat(&mut cpu_line)?;
         Ok(Self {
             previous_cpu,
             temp_path: discover_temp_path(preferred),
             preferred_types: preferred.to_vec(),
+            cpu_line,
+            meminfo_text: String::with_capacity(2048),
         })
     }
 
     pub fn sample(&mut self) -> AppResult<Metrics> {
-        let current_cpu = parse_cpu_stat(&fs::read_to_string(PROC_STAT)?)?;
-        let ram_percent = parse_meminfo(&fs::read_to_string(PROC_MEMINFO)?)?;
+        let current_cpu = read_cpu_stat(&mut self.cpu_line)?;
+        self.meminfo_text.clear();
+        File::open(PROC_MEMINFO)?.read_to_string(&mut self.meminfo_text)?;
+        let ram_percent = parse_meminfo(&self.meminfo_text)?;
         let cpu_percent = cpu_percent(self.previous_cpu, current_cpu);
         self.previous_cpu = current_cpu;
 
@@ -53,6 +61,14 @@ impl Sampler {
             temp_celsius,
         })
     }
+}
+
+/// Read only the aggregate CPU line rather than the entire per-core /proc/stat.
+/// Reuse the line allocation between samples.
+fn read_cpu_stat(line: &mut String) -> AppResult<CpuTicks> {
+    line.clear();
+    BufReader::with_capacity(256, File::open(PROC_STAT)?).read_line(line)?;
+    parse_cpu_stat(line)
 }
 
 fn parse_cpu_stat(source: &str) -> AppResult<CpuTicks> {
